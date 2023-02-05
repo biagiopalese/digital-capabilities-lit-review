@@ -1,0 +1,8 @@
+"0","df %>% filter(year != ""2023"") %>% "
+"0","  group_by(discipline) %>% "
+"0","  count(year, sort = TRUE) %>%"
+"0","  ggplot(aes(x=year, y=n, group=discipline)) +"
+"0","  geom_line(aes(linetype=discipline, color=discipline)) +"
+"0","  theme(legend.position=""top"") +"
+"0","  theme(legend.title=element_blank()) +"
+"0","  labs(title = NULL)"

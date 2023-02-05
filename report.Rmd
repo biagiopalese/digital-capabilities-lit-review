@@ -1,0 +1,82 @@
+---
+title: "Digital Capabilities Report"
+author: "Gabriele"
+date: "2023-02-05"
+output: 
+  pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+
+```{r Load, include = FALSE}
+#PDF Guide https://bookdown.org/yihui/rmarkdown/pdf-document.html
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(janitor)
+library(scales)
+
+raw_data <- read_excel("data.xlsx", sheet = "Scopus", range = "A1:R1102", na = "") %>% clean_names()
+
+df <-
+  raw_data %>% 
+  mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
+                                field == "FINANCE" ~ "Finance",
+                                field == "INFO MAN" ~ "Information Systems",
+                                field == "MARKETING" ~ "Marketing",
+                                str_detect(field, "OPERATION") ~ "Operations",
+                                (field == "ENTREPRENEURSHIP" | field == "IB") ~ "Entrepreneurship and IB",
+                                (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
+                                (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
+                                .default = NA))
+```
+
+## General Observations
+
+This report provides a bunch of information about the dataset of `r raw_data %>% count(field, sort = TRUE, ) %>% tally(n)` articles for our review of the digital capabilities literature. We are focusing in the following disciplines: `r df %>% distinct(discipline)`. 
+
+```{r cars}
+x <- df %>% count(discipline, included) %>% spread(key = included, value = n) %>% 
+  mutate(percentage = percent(Yes / (No + Yes), accuracy = 0.1)) %>% arrange(discipline)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Articles Inspected by Discipline",
+  format.args = list()
+)
+
+x <- df %>% distinct(discipline, field) %>% arrange(discipline)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Mapping of Scopus Fields to Disciplines",
+  format.args = list()
+)
+```
+
+\pagebreak
+For each discipline we examined the following number of journals in the 4 and 4* range:
+
+```{r articles}
+x <- df %>% distinct(source_title, discipline, rating) %>% count(discipline, rating) %>% 
+  spread(key = rating, value = n) %>% arrange(discipline)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Articles Inspected by Discipline",
+  format.args = list()
+)
+```
+
+Predictably the number of articles related to IT capabilities, IT-enabled capabilities and digital capabilities has grown over time in every discipline. 
+
+```{r yearly plot, fig.cap = "Growth of Articles from 1990 to 2022"}
+df %>% filter(year != "2023") %>% 
+  group_by(discipline) %>% 
+  count(year, sort = TRUE) %>%
+  ggplot(aes(x=year, y=n, group=discipline)) +
+  geom_line(aes(linetype=discipline, color=discipline)) +
+  theme(legend.position="top") +
+  theme(legend.title=element_blank())
+```
+

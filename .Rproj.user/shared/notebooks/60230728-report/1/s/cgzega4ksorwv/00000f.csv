@@ -1,0 +1,7 @@
+"0","x <- df %>% count(discipline, included) %>% spread(key = included, value = n) %>% "
+"0","  mutate(percentage = percent(Yes / (No + Yes), accuracy = 0.1))"
+"0","knitr::kable(x, "
+"0","  col.names = str_to_title(names(x)),"
+"0","  caption = ""Articles Inspected by Discipline"","
+"0","  format.args = list()"
+"0",")"
