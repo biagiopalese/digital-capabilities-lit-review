@@ -20,9 +20,30 @@ library(janitor)
 library(scales)
 
 raw_data <- read_excel("data.xlsx", sheet = "Scopus", range = "A1:R1102", na = "") %>% clean_names()
+total_articles <- raw_data %>% count(field, sort = TRUE) %>% tally(n)
+
+raw_classified <- read_excel("data.xlsx", sheet = "Definition classification", range = "A1:U681", na = "") %>% 
+  clean_names() %>% mutate(article_number = str_sub(string = n, start = 1, end = 6))
+raw_classified %>% glimpse()
+examined_articles <- raw_classified %>% distinct(article_number) %>% tally()
+total_constructs <- raw_classified %>% nrow()
+y_def <- raw_classified %>% count(str_to_lower(explicit_definition_y_n)) %>% 
+  filter(`str_to_lower(explicit_definition_y_n)` == "y") %>% pull(n)
 
 df <-
   raw_data %>% 
+  mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
+                                field == "FINANCE" ~ "Finance",
+                                field == "INFO MAN" ~ "Information Systems",
+                                field == "MARKETING" ~ "Marketing",
+                                str_detect(field, "OPERATION") ~ "Operations",
+                                (field == "ENTREPRENEURSHIP" | field == "IB") ~ "Entrepreneurship and IB",
+                                (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
+                                (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
+                                .default = NA))
+
+df_classified <-
+  raw_classified %>% 
   mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
                                 field == "FINANCE" ~ "Finance",
                                 field == "INFO MAN" ~ "Information Systems",
@@ -36,7 +57,7 @@ df <-
 
 ## General Observations
 
-This report provides a bunch of information about the dataset of `r raw_data %>% count(field, sort = TRUE, ) %>% tally(n)` articles for our review of the digital capabilities literature. We are focusing in the following disciplines: `r df %>% distinct(discipline)`. 
+This report provides a bunch of information about the dataset of `r total_articles` articles for our review of the digital capabilities literature. We are focusing in the following disciplines: `r df %>% distinct(discipline)`. 
 
 ```{r cars}
 x <- df %>% count(discipline, included) %>% spread(key = included, value = n) %>% 
@@ -80,3 +101,19 @@ df %>% filter(year != "2023") %>%
   theme(legend.title=element_blank())
 ```
 
+## Dataset creation
+
+The original set of `r total_articles` articles, was reduced to `r examined_articles` articles that were then evaluated based on the content of their title, abstract and keywords. These remaining `r examined_articles` articles were read in depth and any construct that could be classified as Organizational Capability, IT Capability, IT-enabled Capability or Digital Capability was extracted, along with its definition, resulting in a total of `r total_constructs`. Of these, `r y_def` had an explicit construct definition, while `r total_constructs - y_def` did not. The table below lists all the constructs extracted, as well as those that were excluded because despite their name their definition did not fit one of the four focal constructs.
+
+```{r}
+x <- df_classified %>% count(type_of_contruct) %>% 
+  arrange(type_of_contruct)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Articles Inspected by Discipline",
+  format.args = list()
+)
+```
+
+
+## Analysis

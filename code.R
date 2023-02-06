@@ -5,13 +5,23 @@ library(janitor)
 library(scales)
 #library(openxlsx)
 
-raw_data <- read_excel("data.xlsx", sheet = "Scopus", range = "A1:R1102", na = "") %>% clean_names()
-raw_data %>% glimpse()
+raw_scopus <- read_excel("data.xlsx", sheet = "Scopus", range = "A1:R1102", na = "") %>% clean_names()
+raw_scopus %>% glimpse()
+raw_scopus %>% count(field, sort = TRUE, ) %>% tally(n)
 
-raw_data %>% count(field, sort = TRUE, ) %>% tally(n)
+raw_classified <- read_excel("data.xlsx", sheet = "Definition classification", range = "A1:U681", na = "") %>% 
+  clean_names() %>% mutate(article_number = str_sub(string = n, start = 1, end = 6))
+raw_classified %>% glimpse()
+raw_classified %>% distinct(article_number) %>% tally()
+raw_classified %>% nrow()
+raw_classified %>% count(str_to_lower(explicit_definition_y_n)) %>% 
+  filter(`str_to_lower(explicit_definition_y_n)` == "y") %>% pull(n)
+
+constructs <- c("Organizational Capability", "IT Capability", 
+                "IT-enabled Capability", "Digital Capability", "Excluded")
 
 df <-
-  raw_data %>% 
+  raw_scopus %>% 
   mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
                                 field == "FINANCE" ~ "Finance",
                                 field == "INFO MAN" ~ "Information Systems",
@@ -21,6 +31,18 @@ df <-
                                 (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
                                 (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
                                 .default = NA)) 
+
+df_classified <-
+  raw_classified %>% 
+  mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
+                                field == "FINANCE" ~ "Finance",
+                                field == "INFO MAN" ~ "Information Systems",
+                                field == "MARKETING" ~ "Marketing",
+                                str_detect(field, "OPERATION") ~ "Operations",
+                                (field == "ENTREPRENEURSHIP" | field == "IB") ~ "Entrepreneurship and IB",
+                                (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
+                                (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
+                                .default = NA))
 
 df %>% filter(is.na(discipline)) %>% count(discipline, sort = TRUE)
 df %>% count(discipline, sort = TRUE)
@@ -41,12 +63,14 @@ df %>% filter(year != "2023") %>%
   geom_line(aes(linetype=discipline, color=discipline)) +
   theme(legend.position="bottom")
 
+df_classified %>% count(type_of_contruct) %>% 
+  arrange(match(type_of_contruct, constructs))
 
 
 
 
-predf <- clean_names(csv)
-predf <- predf %>% filter(orig_term %in% semesters)
+
+
 
 df <- predf %>% 
   pivot_longer(cols = c('x20131s':'x20223s'))
