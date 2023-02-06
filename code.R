@@ -16,9 +16,14 @@ raw_classified %>% distinct(article_number) %>% tally()
 raw_classified %>% nrow()
 raw_classified %>% count(str_to_lower(explicit_definition_y_n)) %>% 
   filter(`str_to_lower(explicit_definition_y_n)` == "y") %>% pull(n)
+raw_classified %>% select(article_number, type_of_contruct) %>% filter(type_of_contruct != "Excluded") %>% 
+  distinct(article_number) %>% tally() %>% pull(n)
 
-constructs <- c("Organizational Capability", "IT Capability", 
-                "IT-enabled Capability", "Digital Capability", "Excluded")
+# constructs <- c("Organizational Capability", "IT Capability", 
+#                 "IT-enabled Capability", "Digital Capability", "Excluded")
+
+constructs <- c("Organizational capabilities", "IT capabilities", 
+                "IT-enabled capabilities", "Digital capabilities", "Excluded")
 
 df <-
   raw_scopus %>% 
@@ -42,7 +47,8 @@ df_classified <-
                                 (field == "ENTREPRENEURSHIP" | field == "IB") ~ "Entrepreneurship and IB",
                                 (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
                                 (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
-                                .default = NA))
+                                .default = NA)) %>% 
+           mutate(construct = factor(type_of_contruct, levels = constructs, ordered = TRUE), .keep = "unused")
 
 df %>% filter(is.na(discipline)) %>% count(discipline, sort = TRUE)
 df %>% count(discipline, sort = TRUE)
@@ -52,6 +58,7 @@ df %>% count(discipline, included) %>% spread(key = included, value = n) %>%
 
 df %>% distinct(discipline, field) %>% arrange(discipline)
 
+#Articles and Journals
 df %>% distinct(source_title, discipline, rating) %>% count(discipline, rating) %>% 
   spread(key = rating, value = n) %>% arrange(discipline)
 
@@ -63,8 +70,39 @@ df %>% filter(year != "2023") %>%
   geom_line(aes(linetype=discipline, color=discipline)) +
   theme(legend.position="bottom")
 
-df_classified %>% count(type_of_contruct) %>% 
-  arrange(match(type_of_contruct, constructs))
+df_classified %>% select(article_number, construct) %>% filter(construct != "Excluded") %>% 
+  distinct(article_number) %>% tally() %>% pull(n)
+
+df_classified %>% filter(construct != "Excluded") %>% select(article_number, discipline) %>% 
+  distinct(article_number, discipline) %>% count(discipline) %>% arrange(discipline)
+
+#Constructs
+df_classified %>% count(construct, name = "Frequency") %>% 
+  arrange(construct)
+
+df_classified %>% filter(construct != "Excluded") %>% tally() %>% pull(n)
+
+df_classified %>% filter(construct != "Excluded") %>% select(construct, discipline) %>% 
+  count(discipline) %>% arrange(discipline)
+
+df_classified %>% filter(year != "2023") %>% 
+  select(year, construct, discipline) %>% 
+  group_by(discipline) %>% 
+  count(year, sort = TRUE) %>%
+  ggplot(aes(x=year, y=n, group=discipline)) +
+  geom_line(aes(linetype=discipline, color=discipline)) +
+  theme(legend.position="top") +
+  theme(legend.title=element_blank())
+
+df_classified %>% select(year, construct, discipline) %>% 
+  filter(year != "2023") %>% 
+  filter(construct != "Excluded") %>%
+  group_by(construct) %>% 
+  count(year, sort = TRUE) %>%
+  ggplot(aes(x=year, y=n, group=construct)) +
+  geom_line(aes(linetype=construct, color=construct)) +
+  theme(legend.position="top") +
+  theme(legend.title=element_blank())
 
 
 
@@ -72,6 +110,10 @@ df_classified %>% count(type_of_contruct) %>%
 
 
 
+
+
+
+###########################################
 df <- predf %>% 
   pivot_longer(cols = c('x20131s':'x20223s'))
 

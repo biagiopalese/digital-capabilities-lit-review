@@ -30,6 +30,12 @@ total_constructs <- raw_classified %>% nrow()
 y_def <- raw_classified %>% count(str_to_lower(explicit_definition_y_n)) %>% 
   filter(`str_to_lower(explicit_definition_y_n)` == "y") %>% pull(n)
 
+# constructs <- c("Organizational Capability", "IT Capability", 
+#                 "IT-enabled Capability", "Digital Capability", "Excluded")
+
+constructs <- c("Organizational capabilities", "IT capabilities", 
+                "IT-enabled capabilities", "Digital capabilities", "Excluded")
+
 df <-
   raw_data %>% 
   mutate(discipline = case_when(field == "ACCOUNTING" ~ "Accounting",
@@ -52,7 +58,13 @@ df_classified <-
                                 (field == "ENTREPRENEURSHIP" | field == "IB") ~ "Entrepreneurship and IB",
                                 (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
                                 (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
-                                .default = NA))
+                                .default = NA)) %>% 
+           mutate(construct = factor(type_of_contruct, levels = constructs, ordered = TRUE), .keep = "unused")
+
+categorized_articles <- df_classified %>% select(article_number, construct) %>% filter(construct != "Excluded") %>% 
+  distinct(article_number) %>% tally() %>% pull(n)
+categorized_constructs <- df_classified %>% filter(construct != "Excluded") %>% tally() %>% pull(n)
+
 ```
 
 ## General Observations
@@ -103,16 +115,71 @@ df %>% filter(year != "2023") %>%
 
 ## Dataset creation
 
-The original set of `r total_articles` articles, was reduced to `r examined_articles` articles that were then evaluated based on the content of their title, abstract and keywords. These remaining `r examined_articles` articles were read in depth and any construct that could be classified as Organizational Capability, IT Capability, IT-enabled Capability or Digital Capability was extracted, along with its definition, resulting in a total of `r total_constructs`. Of these, `r y_def` had an explicit construct definition, while `r total_constructs - y_def` did not. The table below lists all the constructs extracted, as well as those that were excluded because despite their name their definition did not fit one of the four focal constructs.
+The original set of `r total_articles` articles, was reduced to `r examined_articles` articles that were then evaluated based on the content of their title, abstract and keywords. These remaining `r examined_articles` articles were read in depth and any construct that could be classified as Organizational Capability, IT Capability, IT-enabled Capability or Digital Capability was extracted, along with its definition. After the categorization stage, `r categorized_articles` articles remained with at least one construct of interest.
 
 ```{r}
-x <- df_classified %>% count(type_of_contruct) %>% 
-  arrange(type_of_contruct)
+x <- df_classified %>% filter(construct != "Excluded") %>% select(article_number, discipline) %>% 
+  distinct(article_number, discipline) %>% count(discipline) %>% arrange(discipline)
 knitr::kable(x, 
   col.names = str_to_title(names(x)),
-  caption = "Articles Inspected by Discipline",
+  caption = "Articles with Constructs of Interest by Discipline",
   format.args = list()
 )
+```
+
+The above article categorization resulted in a total of `r total_constructs` analyzed. Of these, `r y_def` had an explicit construct definition, while `r total_constructs - y_def` did not. Moreover, upon evaluation a total of `r categorized_constructs` constructs fit the theoretical definition of Organizational Capability, IT Capability, IT-enabled Capability or Digital Capability and were retained.
+
+The table below lists all the constructs extracted, as well as those that were excluded because upon analysis of the definition, did not fit one of the four focal constructs.
+
+```{r}
+x <- df_classified %>% count(construct, name = "Frequency") %>% 
+  arrange(construct)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Frequency of Retained Constructs",
+  format.args = list()
+)
+```
+
+The following is the prevalence of retained construct by discipline.
+
+```{r}
+x <- df_classified %>% filter(construct != "Excluded") %>% select(construct, discipline) %>% 
+  count(discipline) %>% arrange(discipline)
+knitr::kable(x, 
+  col.names = str_to_title(names(x)),
+  caption = "Retained Constructs by Discipline",
+  format.args = list()
+)
+```
+
+\pagebreak
+Predictably the number of articles related to IT capabilities, IT-enabled capabilities and digital capabilities has grown over time in every discipline.
+
+```{r fig.cap = "Growth of Constructs Use by Discipline from 1990 to 2022"}
+df_classified %>% filter(year != "2023") %>% 
+  select(year, construct, discipline) %>% 
+  group_by(discipline) %>% 
+  count(year, sort = TRUE) %>%
+  ggplot(aes(x=year, y=n, group=discipline)) +
+  geom_line(aes(linetype=discipline, color=discipline)) +
+  theme(legend.position="top") +
+  theme(legend.title=element_blank())
+```
+
+\pagebreak
+Attention has been mostly focused on IT Capabilities across disciplines
+
+```{r fig.cap = "Constructs Use over time across disciplines 1990 to 2022"}
+df_classified %>% select(year, construct, discipline) %>% 
+  filter(year != "2023") %>% 
+  filter(construct != "Excluded") %>%
+  group_by(construct) %>% 
+  count(year, sort = TRUE) %>%
+  ggplot(aes(x=year, y=n, group=construct)) +
+  geom_line(aes(linetype=construct, color=construct)) +
+  theme(legend.position="top") +
+  theme(legend.title=element_blank())
 ```
 
 
