@@ -21,20 +21,16 @@ library(scales)
 
 raw_data <- read_excel("data.xlsx", sheet = "Scopus", range = "A1:R1102", na = "") %>% clean_names()
 total_articles <- raw_data %>% count(field, sort = TRUE) %>% tally(n)
-
 raw_classified <- read_excel("data.xlsx", sheet = "Definition classification", range = "A1:U681", na = "") %>% 
-  clean_names() %>% mutate(article_number = str_sub(string = n, start = 1, end = 6))
+  clean_names() %>% mutate(article_number = str_sub(string = id, start = 1, end = 6))
 raw_classified %>% glimpse()
 examined_articles <- raw_classified %>% distinct(article_number) %>% tally()
 total_constructs <- raw_classified %>% nrow()
 y_def <- raw_classified %>% count(str_to_lower(explicit_definition_y_n)) %>% 
   filter(`str_to_lower(explicit_definition_y_n)` == "y") %>% pull(n)
 
-# constructs <- c("Organizational Capability", "IT Capability", 
-#                 "IT-enabled Capability", "Digital Capability", "Excluded")
-
-constructs <- c("Organizational capabilities", "IT capabilities", 
-                "IT-enabled capabilities", "Digital capabilities", "Excluded")
+constructs <- c("Organizational capability", "IT capability",
+                "IT-enabled capability", "Digital capability", "Excluded")
 
 df <-
   raw_data %>% 
@@ -59,7 +55,7 @@ df_classified <-
                                 (field == "HR" | field == "ORGANISATION STUDIES" | field == "MANAGEMENT") ~ "Management",
                                 (field == "STRATEGY" | field == "INNOVATION") ~ "Strategy and Innovation",
                                 .default = NA)) %>% 
-           mutate(construct = factor(type_of_contruct, levels = constructs, ordered = TRUE), .keep = "unused")
+           mutate(construct = factor(type_of_construct, levels = constructs, ordered = TRUE), .keep = "all")
 
 categorized_articles <- df_classified %>% select(article_number, construct) %>% filter(construct != "Excluded") %>% 
   distinct(article_number) %>% tally() %>% pull(n)
@@ -184,3 +180,4 @@ df_classified %>% select(year, construct, discipline) %>%
 
 
 ## Analysis
+
